@@ -178,19 +178,19 @@ function handleAddStep() {
 .pipeline-connector {
   width: 2px;
   height: 24px;
-  background: linear-gradient(to bottom, var(--border), var(--border));
+  background: var(--accent);
   flex-shrink: 0;
   position: relative;
 }
 .pipeline-connector::after {
   content: '';
   position: absolute;
-  bottom: -5px;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 6px solid var(--border);
+  border-top: 6px solid var(--accent);
 }
 
 .pipeline-step-row {

@@ -420,6 +420,8 @@
 <script setup>
 import { ref, reactive, watch, computed } from 'vue'
 import { useFlowStore } from '../stores/flows'
+import * as jsYaml from 'js-yaml'
+import processorsRaw from '../config/processors.yaml?raw'
 
 const store = useFlowStore()
 
@@ -436,22 +438,7 @@ const configTypes = [
   { value: 'mock', label: 'Mock' }
 ]
 
-const processorsByType = {
-  Route: [
-    'ipaas_framework.route.core.composite_router.CompositeRouter',
-    'ipaas_framework.route.core.simple_router.SimpleRouter'
-  ],
-  Operate: [
-    'ipaas_framework.operate.lambda_connector.LambdaConnector',
-    'ipaas_framework.operate.http_component.HTTPComponent',
-    'ipaas_framework.operate.sqs_connector.SQSConnector',
-    'ipaas_framework.operate.dynamodb_connector.DynamoDBConnector'
-  ],
-  Transform: [
-    'ipaas_framework.transform.jmespath_transformer.JMESPathTransformer',
-    'ipaas_framework.transform.handlebars_transformer.HandlebarsTransformer'
-  ]
-}
+const processorsByType = jsYaml.load(processorsRaw)
 
 const processorSuggestions = computed(() => {
   return processorsByType[stepForm.type] || []

@@ -91,6 +91,13 @@ export const useFlowStore = defineStore('flows', () => {
       output: data.output || null,
       onErrorContinue: data.onErrorContinue || null
     }
+    // Update the previous last step's next to point to this new step
+    if (flow.steps.length > 0) {
+      const prev = flow.steps[flow.steps.length - 1]
+      if (prev.next === 'END') {
+        prev.next = step.stepId
+      }
+    }
     flow.steps.push(step)
     selectedStepId.value = stepUid
     // Auto-set start if first step

@@ -1,5 +1,7 @@
 <template>
-  <div class="output-panel" :class="{ collapsed: isCollapsed }">
+  <div class="output-panel" :class="{ collapsed: isCollapsed }" :style="!isCollapsed ? { height: panelHeight + 'px' } : {}">
+    <!-- Resize handle -->
+    <div v-if="!isCollapsed" class="output-resize-handle" @mousedown.prevent="startResize"></div>
     <!-- Toggle bar -->
     <div class="output-toggle-bar" @click="isCollapsed = !isCollapsed">
       <span class="output-toggle-icon">{{ isCollapsed ? '▲' : '▼' }}</span>
@@ -43,6 +45,25 @@ const store = useFlowStore()
 const isCollapsed = ref(false)
 const activeTab = ref('yaml')
 const copyStatus = ref('Copy')
+const panelHeight = ref(320)
+
+function startResize(e) {
+  const startY = e.clientY
+  const startHeight = panelHeight.value
+
+  function onMove(e) {
+    const delta = startY - e.clientY
+    panelHeight.value = Math.max(80, Math.min(window.innerHeight - 100, startHeight + delta))
+  }
+
+  function onUp() {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
 
 const yamlOutput = computed(() => generateYaml(store.flows, store.configFileName))
 const jsonOutput = computed(() => generateJson(store.configs))
@@ -172,12 +193,22 @@ function downloadFile(content, filename, mime) {
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  max-height: 320px;
-  transition: max-height 0.2s ease;
 }
 
 .output-panel.collapsed {
-  max-height: 36px;
+  height: 36px !important;
+}
+
+.output-resize-handle {
+  height: 5px;
+  cursor: ns-resize;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.output-resize-handle:hover {
+  background: var(--accent);
 }
 
 .output-toggle-bar {

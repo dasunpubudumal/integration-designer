@@ -12,7 +12,6 @@ export function generateYaml(flows, configFileName = 'papi_config.json') {
   const flowObjects = flows.map(flow => {
     const flowObj = {}
 
-    // The flow name is the first key with null value (produces `flowname:` in YAML)
     flowObj[flow.name] = null
     flowObj.version = flow.version || 'v0.1'
     flowObj.method = flow.method || 'GET'
@@ -94,7 +93,9 @@ export function generateYaml(flows, configFileName = 'papi_config.json') {
   })
 
   const doc = { flows: flowObjects }
-  return jsYaml.dump(doc, { lineWidth: -1, noRefs: true })
+  const raw = jsYaml.dump(doc, { lineWidth: -1, noRefs: true })
+  // js-yaml always writes `null` explicitly; strip it from flow-name header lines
+  return raw.replace(/^(  - .+): null$/gm, '$1:')
 }
 
 /**

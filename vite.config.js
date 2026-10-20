@@ -8,5 +8,10 @@ export default defineConfig({
   },
   preview: {
     port: 3000
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./tests/setup.js'],
+    include: ['tests/**/*.test.js']
   }
 })

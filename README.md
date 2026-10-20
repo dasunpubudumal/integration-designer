@@ -1,5 +1,8 @@
 # Integration Designer
 
+[![Unit Tests](https://github.com/dasunpubudumal/integration-designer/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/dasunpubudumal/integration-designer/actions/workflows/unit-tests.yml)
+[![Integration Tests](https://github.com/dasunpubudumal/integration-designer/actions/workflows/integration-tests.yml/badge.svg?branch=main)](https://github.com/dasunpubudumal/integration-designer/actions/workflows/integration-tests.yml)
+
 A browser-based visual designer for authoring iPaaS integration flows. You build each flow as a pipeline of steps on a canvas, fill in each step's settings and config in a side panel, and the app generates the two files the iPaaS framework needs:
 
 - **A YAML DSL file** that defines the flows and their steps.
@@ -16,6 +19,8 @@ Both outputs update live as you edit, and you can copy or download them at any t
 - [Config types](#config-types)
 - [What it generates](#what-it-generates)
 - [Customising processor suggestions](#customising-processor-suggestions)
+- [Testing](#testing)
+- [Continuous integration](#continuous-integration)
 - [Project structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
 - [Tech stack](#tech-stack)
@@ -34,7 +39,7 @@ Both outputs update live as you edit, and you can copy or download them at any t
 
 ### Prerequisites
 
-- **Node.js** 18, or 20 and later. Check with `node -v`.
+- **Node.js** 24 (the version in `.nvmrc`). Node 18, or 20 and later, also works, but CI runs on 24. Check with `node -v`.
 - **npm**, which comes with Node.js.
 - A modern browser (current Chrome, Edge, Firefox or Safari).
 
@@ -43,9 +48,12 @@ Both outputs update live as you edit, and you can copy or download them at any t
 ```bash
 git clone https://github.com/dasunpubudumal/integration-designer.git
 cd integration-designer
+nvm use            # optional: switches to the Node version in .nvmrc
 npm install
 npm run dev
 ```
+
+If you use [nvm](https://github.com/nvm-sh/nvm) and don't have Node 24 yet, run `nvm install` first.
 
 Then open **http://localhost:3000**. The dev server reloads the page as you change the source.
 
@@ -56,7 +64,7 @@ npm run build     # outputs static files to dist/
 npm run preview   # serves dist/ at http://localhost:3000
 ```
 
-`dist/` is a plain static site, so it can be hosted on any static web server (S3, nginx, GitHub Pages and so on). No backend is needed.
+`dist/` is a plain static site, so it can be hosted on any static web server (S3, nginx, GitHub Pages and so on). No backend is needed. `dist/` isn't committed; CI builds it (see [Continuous integration](#continuous-integration)).
 
 ### Available scripts
 
@@ -65,6 +73,10 @@ npm run preview   # serves dist/ at http://localhost:3000
 | `npm run dev` | Starts the Vite dev server on port 3000 with hot reload |
 | `npm run build` | Builds the production bundle into `dist/` |
 | `npm run preview` | Serves the built `dist/` folder on port 3000 |
+| `npm test` | Runs all unit and integration tests once |
+| `npm run test:unit` | Runs only the unit tests |
+| `npm run test:integration` | Runs only the integration tests |
+| `npm run test:watch` | Runs the tests in watch mode, re-running on each change |
 
 To use a different port, change `server.port` and `preview.port` in `vite.config.js`.
 
@@ -323,28 +335,73 @@ Transform:
 
 To add a processor, add its class path under the right step type. The top-level keys must match the step type names exactly (`Validate`, `Enrich`, `Transform`, `Route`, `Operate`). A type with no entry simply shows no suggestions; you can still type any class path. The dev server picks up changes on reload; for a deployed copy, rebuild with `npm run build`.
 
+## Testing
+
+Tests use [Vitest](https://vitest.dev/) with [Vue Test Utils](https://test-utils.vuejs.org/) and [jsdom](https://github.com/jsdom/jsdom), so they run in Node without a browser.
+
+```bash
+npm test                   # run everything once
+npm run test:unit          # unit tests only
+npm run test:integration   # integration tests only
+npm run test:watch         # re-run on every change while developing
+npx vitest run tests/unit/generator.test.js   # run one file
+```
+
+The tests are split into two folders:
+
+| Folder | What it covers |
+|--------|----------------|
+| `tests/unit/` | Single modules on their own. The YAML/JSON generator, the Pinia store (flows, steps, config renaming, persistence) and the `SelectMenu` dropdown (options, keyboard, events). |
+| `tests/integration/` | The whole app, mounted and driven the way a user would use it. Typing in the editor and checking the Output panel, adding steps, renaming and switching configs, the Schema Validation and SNS forms, and canvas zoom. |
+
+`tests/integration/helpers.js` has helpers for these tests, such as `mountApp()`, `type(wrapper, 'Label', value)`, `pick(wrapper, 'Label', 'Option')`, `yaml(wrapper)` and `json(wrapper)`. Fields are found by their visible label, so tests read like the UI. `tests/setup.js` stubs the browser APIs jsdom lacks (such as `ResizeObserver`), clears `localStorage` before each test and auto-accepts confirmation dialogs.
+
+When you add a feature, add a unit test for any new logic in `src/utils` or `src/stores`, and an integration test for what the user sees change.
+
+## Continuous integration
+
+Three GitHub Actions workflows run on every push to `main` and on every pull request. Each uses the Node version from `.nvmrc` and installs dependencies with `npm ci`, exactly as pinned in `package-lock.json`.
+
+| Workflow | File | What it does |
+|----------|------|--------------|
+| Unit Tests | `.github/workflows/unit-tests.yml` | Runs `npm run test:unit` |
+| Integration Tests | `.github/workflows/integration-tests.yml` | Runs `npm run test:integration` |
+| Build | `.github/workflows/build.yml` | Runs `npm run build` and uploads `dist/` as an artifact named **dist**, kept for 14 days. Download it from the run's summary page in the **Actions** tab. |
+
+The badges at the top of this README show the latest result of the two test workflows on `main`. Click a badge to see its runs. The workflows are separate so each badge reports its own suite; they run in parallel, and a failure in one doesn't stop the others.
+
+A new push to the same branch or PR cancels any run of the same workflow already in progress.
+
+Because CI installs with `npm ci`, commit `package-lock.json` whenever you add or update a dependency.
+
 ## Project structure
 
 ```
 integration-designer/
+├── .github/workflows/         # CI: unit tests, integration tests, build
+├── .nvmrc                     # Node version for nvm and CI
 ├── index.html                 # App entry page
 ├── public/favicon.svg         # Favicon
-├── vite.config.js             # Vite config (ports)
-└── src/
-    ├── main.js                # Bootstraps Vue and Pinia; restores saved state
-    ├── App.vue                # Top bar, three-column layout, global styles
-    ├── components/
-    │   ├── FlowSidebar.vue    # Flow list and new-flow form
-    │   ├── FlowCanvas.vue     # Pipeline canvas with zoom and pan
-    │   ├── StepCard.vue       # A step on the canvas
-    │   ├── EditorPanel.vue    # Flow, step and config editors
-    │   ├── SelectMenu.vue     # Dropdown / combobox used across the editor
-    │   └── OutputPanel.vue    # Live YAML/JSON preview, copy and download
-    ├── stores/flows.js        # Pinia store: flows, steps, configs, persistence, example data
-    ├── utils/
-    │   ├── generator.js       # Builds the YAML and JSON output
-    │   └── stepTypes.js       # Step types and their colours
-    └── config/processors.yaml # Processor suggestions per step type
+├── vite.config.js             # Vite and Vitest config
+├── src/
+│   ├── main.js                # Bootstraps Vue and Pinia; restores saved state
+│   ├── App.vue                # Top bar, three-column layout, global styles
+│   ├── components/
+│   │   ├── FlowSidebar.vue    # Flow list and new-flow form
+│   │   ├── FlowCanvas.vue     # Pipeline canvas with zoom and pan
+│   │   ├── StepCard.vue       # A step on the canvas
+│   │   ├── EditorPanel.vue    # Flow, step and config editors
+│   │   ├── SelectMenu.vue     # Dropdown / combobox used across the editor
+│   │   └── OutputPanel.vue    # Live YAML/JSON preview, copy and download
+│   ├── stores/flows.js        # Pinia store: flows, steps, configs, persistence, example data
+│   ├── utils/
+│   │   ├── generator.js       # Builds the YAML and JSON output
+│   │   └── stepTypes.js       # Step types and their colours
+│   └── config/processors.yaml # Processor suggestions per step type
+└── tests/
+    ├── setup.js               # Browser API stubs and per-test reset
+    ├── unit/                  # Generator, store and SelectMenu tests
+    └── integration/           # Whole-app tests and their helpers
 ```
 
 ## Troubleshooting
@@ -367,3 +424,4 @@ That's intended. Drag the background or use the scrollbars to move around.
 - [Pinia](https://pinia.vuejs.org/) for state management
 - [js-yaml](https://github.com/nodeca/js-yaml) for YAML parsing and output
 - [Vite 5](https://vitejs.dev/) for development and bundling
+- [Vitest](https://vitest.dev/), [Vue Test Utils](https://test-utils.vuejs.org/) and [jsdom](https://github.com/jsdom/jsdom) for testing

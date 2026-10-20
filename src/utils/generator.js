@@ -65,7 +65,6 @@ export function generateYaml(flows, configFileName = 'papi_config.json') {
         if (Object.keys(checksObj).length > 0) {
           outputObj.checks = checksObj
         }
-        flowObj.output = outputObj
         stepObj.output = outputObj
       }
 

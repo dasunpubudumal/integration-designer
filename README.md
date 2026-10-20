@@ -400,6 +400,7 @@ Because CI installs with `npm ci`, commit `package-lock.json` whenever you add o
 
 ```
 integration-designer/
+├── .claude/                  # Claude Code project guide (CLAUDE.md) and skills
 ├── .github/workflows/         # CI: unit tests, integration tests, build
 ├── .nvmrc                     # Node version for nvm and CI
 ├── index.html                 # App entry page

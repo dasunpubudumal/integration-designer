@@ -1,2 +1,7 @@
 node_modules/
 dist/
+
+# Claude Code: personal, machine-local files (shared ones in .claude/ are committed)
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+CLAUDE.local.md

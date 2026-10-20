@@ -7,6 +7,7 @@ Operate:
   - ipaas_framework.operate.http_component.HTTPComponent
   - ipaas_framework.operate.sqs_connector.SQSConnector
   - ipaas_framework.operate.dynamodb_connector.DynamoDBConnector
+  - ipaas_framework.operate.sns.sns_connector.SNSConnector
 
 Transform:
   - ipaas_framework.transform.jmespath_transformer.JMESPathTransformer

@@ -14,9 +14,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Method</label>
-          <select v-model="newFlow.method">
-            <option v-for="m in methods" :key="m" :value="m">{{ m }}</option>
-          </select>
+          <SelectMenu v-model="newFlow.method" :options="methods" />
         </div>
         <div class="form-group">
           <label>Version</label>
@@ -70,6 +68,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useFlowStore } from '../stores/flows'
+import SelectMenu from './SelectMenu.vue'
 
 const store = useFlowStore()
 const showNewForm = ref(false)

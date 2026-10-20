@@ -242,9 +242,8 @@ body {
 
 .canvas {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg);
-  padding: 24px;
   min-width: 0;
 }
 

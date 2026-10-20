@@ -1,27 +1,266 @@
 # Integration Designer
 
-A browser-based visual designer for authoring iPaaS integration flows. It generates two output files — the YAML DSL that defines the flow pipeline and the companion JSON config that backs each step.
+A browser-based visual designer for authoring iPaaS integration flows. You build each flow as a pipeline of steps on a canvas, fill in each step's settings and config in a side panel, and the app generates the two files the iPaaS framework needs:
 
-## Getting started
+- **A YAML DSL file** that defines the flows and their steps.
+- **A companion JSON config file** that holds the configuration each step references.
+
+Both outputs update live as you edit, and you can copy or download them at any time.
+
+## Contents
+
+- [Features](#features)
+- [Setting up](#setting-up)
+- [Using the designer](#using-the-designer)
+- [Step types](#step-types)
+- [Config types](#config-types)
+- [What it generates](#what-it-generates)
+- [Customising processor suggestions](#customising-processor-suggestions)
+- [Project structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [Tech stack](#tech-stack)
+
+## Features
+
+- Visual pipeline canvas with zoom (mouse wheel) and pan (drag the background).
+- Five step types (Validate, Enrich, Transform, Route and Operate), colour-coded on the canvas.
+- Type-specific config forms for routers, Lambda, HTTP, JMESPath mappings, JSON Schema validation, SQS, SNS, DynamoDB and mocks.
+- Every new step gets its own config automatically. Configs can also be shared between steps.
+- Conditional branching (`output.checks`), `on-error-continue` handling and batch execution.
+- Live, syntax-highlighted YAML and JSON output with copy and download.
+- Work is saved in the browser automatically, so a refresh doesn't lose anything.
+
+## Setting up
+
+### Prerequisites
+
+- **Node.js** 18, or 20 and later. Check with `node -v`.
+- **npm**, which comes with Node.js.
+- A modern browser (current Chrome, Edge, Firefox or Safari).
+
+### Install and run
 
 ```bash
+git clone https://github.com/dasunpubudumal/integration-designer.git
+cd integration-designer
 npm install
 npm run dev
-# → http://localhost:3000
 ```
 
-For a production build served by Express:
+Then open **http://localhost:3000**. The dev server reloads the page as you change the source.
+
+### Production build
 
 ```bash
-npm run build
-npm run serve
+npm run build     # outputs static files to dist/
+npm run preview   # serves dist/ at http://localhost:3000
 ```
+
+`dist/` is a plain static site, so it can be hosted on any static web server (S3, nginx, GitHub Pages and so on). No backend is needed.
+
+### Available scripts
+
+| Script | What it does |
+|--------|--------------|
+| `npm run dev` | Starts the Vite dev server on port 3000 with hot reload |
+| `npm run build` | Builds the production bundle into `dist/` |
+| `npm run preview` | Serves the built `dist/` folder on port 3000 |
+
+To use a different port, change `server.port` and `preview.port` in `vite.config.js`.
+
+## Using the designer
+
+### Layout
+
+```
+┌─ Top bar ───────────────────────────────────────────────────────────────────┐
+│ ⬢ Integration Designer   Config file: [papi_config.json]                    │
+│                   [Load Example] [Clear All] [Download YAML] [Download JSON]│
+├─ Flows ──────────┬─ Canvas ─────────────────────────────┬─ Editor ──────────┤
+│ [+ New]          │ GET /studies/v1  v0.1  PAPI     100% │ Flow / Step       │
+│                  ├──────────────────────────────────────┤ properties        │
+│ ► get_studies/v1 │            ○ START                   │                   │
+│   post_studies   │               │                      │ Config            │
+│                  │      ┌──────────────────┐            │ [+ New Config]    │
+│                  │      │ Route            │            │ key, type and     │
+│                  │      │ study_router     │            │ type-specific     │
+│                  │      └──────────────────┘            │ fields            │
+│                  │               │                      │                   │
+│                  │            ○ END                     │                   │
+│                  │        [+ Add Step]                  │                   │
+├──────────────────┴──────────────────────────────────────┴───────────────────┤
+│ ▼ Output   [YAML] [JSON]                        [Copy] [↓ YAML] [↓ JSON]    │
+│ live, syntax-highlighted preview                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Quick start: explore the example
+
+1. Click **Load Example** in the top bar. This replaces your current work with a set of sample study flows.
+2. Pick a flow in the **Flows** sidebar to show it on the canvas.
+3. Click a step card to see and edit its properties and config in the **Editor** panel.
+4. Watch the **Output** panel at the bottom update as you make changes.
+
+### 1. Create a flow
+
+1. Click **+ New** at the top of the Flows sidebar.
+2. Fill in:
+   - **Flow Name**, for example `get_studies/v1`. This becomes the flow's key in the YAML.
+   - **Method**: GET, POST, PUT, PATCH or DELETE.
+   - **Version**, for example `v0.1`.
+   - **Path**, for example `/studies/v1`.
+   - **Layer**, for example `PAPI`, `SAPI` or `XAPI`.
+3. Click **Create**. The new flow is selected and shown on the canvas.
+
+To change these later, select the flow and edit them in the **Flow Properties** panel. That's also where you set:
+
+- **Start Step**, the step the flow begins with. It's set to the first step automatically.
+- **Batch Execution**, which runs the pipeline once per record of an array in the payload. See [Batch execution](#batch-execution).
+
+To delete a flow, hover over it in the sidebar and click **✕**.
+
+### 2. Add steps
+
+Click **+ Add Step** under the pipeline. Each new step:
+
+- gets an ID such as `step_3`, defaults to the **Operate** type and points `next` to `END`;
+- is linked from the previous last step, if that step pointed to `END`;
+- gets its **own new config**, keyed after the step ID.
+
+Use the **▲ / ▼** buttons on a card to reorder steps, and **✕** to delete one.
+
+### 3. Edit a step
+
+Click a step card to open **Step Properties**:
+
+| Field | Meaning |
+|-------|---------|
+| **Step ID** | The step's `id` in the YAML. Other steps use it in `next`. |
+| **Type** | Validate, Enrich, Transform, Route or Operate. |
+| **Next** | The step to run afterwards, or `END`. Pick from the list or type an expression, for example `step.my_router.output.destination`. |
+| **Processor** | The processor class. The list suggests processors for the chosen type, but you can type any class path. |
+| **Input Expression** | Optional input mapping, for example `step.init.input` or `{body: step.x.output}`. |
+| **Output Checks** | Optional named conditions that branch to other steps. See [Conditional branching](#conditional-branching). |
+| **On-Error-Continue** | Optional exception handling. See [On-error-continue](#on-error-continue). |
+
+Click **← Flow** to go back to the flow's properties.
+
+### 4. Configure the step
+
+The **Config** section below the step properties edits the JSON config block that the step references.
+
+- **Config Key** is the block's key in the JSON file.
+  - **Typing** renames the step's config. The JSON and the YAML reference update as you type. If several steps share the config, all of them follow the rename.
+  - **Picking from the list** switches the step to an existing config.
+  - If you type a key that already exists, nothing is overwritten. A hint appears, and clicking out of the field switches the step to that existing config.
+- **+ New Config** creates a fresh config for the step and links it straight away. The config type is guessed from the step's processor (for example, `SNSConnector` gives **SNS Publish**), and the key is selected so you can type a name over it.
+- **Config Type** chooses the form shown below it. See [Config types](#config-types).
+- **Delete** removes the config block and unlinks the step.
+
+Every change is reflected in the output immediately; there's no save button.
+
+### 5. Get the output
+
+The **Output** panel at the bottom shows both files live:
+
+- Switch between **YAML** and **JSON** with the tabs.
+- **Copy** copies the visible file to the clipboard.
+- **↓ YAML** and **↓ JSON**, or **Download YAML** / **Download JSON** in the top bar, save the files.
+- Drag the panel's top edge to resize it, or click its title bar to collapse it.
+
+The **Config file** name in the top bar is used both as the JSON download's file name and in every step's config reference (`ref:config/<file name>@<key>`). The YAML downloads as `study-papi-config.yaml`.
+
+### Canvas controls
+
+| Action | How |
+|--------|-----|
+| Zoom in or out | Scroll the mouse wheel (or pinch on a trackpad) over the canvas. Zoom centres on the cursor and ranges from 25% to 250%. |
+| Reset zoom | Click the percentage at the right of the flow header. |
+| Pan | Click and drag on empty canvas background, or use the scrollbars. |
+| Select a step | Click its card. |
+
+The flow header (method, path, version and layer) stays fixed while you zoom and pan.
+
+### Saving your work
+
+Your work is saved to the browser's `localStorage` on every change and restored when you reload the page. Things to bear in mind:
+
+- It's stored **per browser and per machine**. To move work elsewhere or share it, download the YAML and JSON files.
+- Clearing your browser's site data deletes it.
+- **Clear All** in the top bar removes all flows and configs after asking you to confirm.
+- **Load Example** replaces your current work. If you already have flows, it asks you to confirm first.
+
+## Step types
+
+| Type | Purpose | Colour |
+|------|---------|--------|
+| **Validate** | Checks incoming data, for example against a JSON Schema | Purple |
+| **Enrich** | Adds data to the payload from another source | Pink |
+| **Transform** | Reshapes data, for example with a JMESPath expression | Amber |
+| **Route** | Picks the next step by evaluating rules | Blue |
+| **Operate** | Calls an external system: Lambda, HTTP, SQS, SNS or DynamoDB | Green |
+
+### Conditional branching
+
+A step can declare `output.checks`: named predicates that send execution to a different step when they're true. The step's own `next` is used when no check matches.
+
+```yaml
+output:
+  value: "@"
+  checks:
+    sequencescape_success:
+      predicate: "data!=null && data.statusCode!=null && (data.statusCode==`200`||data.statusCode==`201`)"
+      next: mlwh_sapi_function_connector
+next: sequencescape_notification_transformer
+```
+
+Add checks with **+ Check** in the step editor. The canvas shows each check beside its step as `✓ check_name → destination`.
+
+### On-error-continue
+
+A step can catch named exceptions and continue at another step instead of halting the flow. Tick **Enable on-error-continue** in the step editor:
+
+```yaml
+on-error-continue:
+  exceptions: ["Exception"]
+  next: study_creation_papi_dlq_connector
+```
+
+### Batch execution
+
+A flow can run in batch mode. The framework splits an array from the incoming payload and runs the pipeline once per record. Tick **Batch Execution** in the flow properties:
+
+```yaml
+execution:
+  type: batch
+  batch_input_path: body.Records
+```
+
+## Config types
+
+| Config Type | `type` in JSON | Key fields |
+|-------------|----------------|------------|
+| Route | `route` | `rules`: a map of `{ field, value, destination }` |
+| Lambda Function | `lambda_function` | `invocation_type` (`RequestResponse` or `Event`) |
+| HTTP Connector | `http_connector` | `provider_key`, `raw_auth_config` (OAuth2 client credentials, bearer, basic or none), `max_retries`, `timeout` |
+| Mapping (JMESPath) | `mapping` | `engine: jmespath`, `spec` |
+| Schema Validation | `schema` | `spec_engine: jsonschema`, `spec_s3_uri`, `spec` |
+| SQS | `sqs` | `operation`, `queue_name` |
+| SNS Publish | `sns_publish` | `max_retries`, `operation`, `sns_config` (`topic_arn`, `message_structure`, `message_attributes`), `input_path` |
+| DynamoDB | `dynamodb` | `operation`, `partition_key`, `sort_key`, `table_name`, `region_name` |
+| Mock | `mock` | `file`: path to a mock response JSON |
+
+Notes:
+
+- **Schema Validation:** type or paste the JSON Schema as normal, formatted JSON. It's written to the config as a single-line string, which is what the framework expects. If the JSON is invalid, a warning appears and the text is saved exactly as typed.
+- **SNS Publish:** add message attributes with **+ Attribute**. Each has a name, a path, a default and a data type (`String`, `String.Array`, `Number` or `Binary`).
+- Values such as `env:QUEUE_NAME` or `sm:secret-name.key` are passed through unchanged, for the framework to resolve at runtime.
 
 ## What it generates
 
-### YAML DSL (`study-papi-config.yaml`)
+### YAML DSL
 
-Describes one or more integration flows. Each flow is a sequential pipeline of steps executed from a named start point through to `END`.
+Describes one or more flows. Each flow is a pipeline of steps, run from its start step through to `END`.
 
 ```yaml
 flows:
@@ -46,9 +285,9 @@ flows:
         next: END
 ```
 
-### JSON config (`papi_config.json`)
+### JSON config
 
-A flat object where each key is a named configuration block referenced by steps in the YAML via `ref:config/<filename>@<key>`. Config blocks are shared — multiple steps across multiple flows can reference the same key.
+A flat object. Each key is a config block that steps reference from the YAML with `ref:config/<file name>@<key>`. One block can be shared by several steps across several flows.
 
 ```json
 {
@@ -69,106 +308,62 @@ A flat object where each key is a named configuration block referenced by steps 
 }
 ```
 
-## UI overview
+## Customising processor suggestions
 
-```
-┌─── Top bar ─────────────────────────────────────────────────────────────┐
-│ ⬡ Integration Designer  [config filename]  [Load Example] [Download]    │
-├─── Flows (250px) ──────┬─── Canvas ──────────────────┬─── Editor (380px)─┤
-│                        │                             │                   │
-│ [+ New Flow]           │  GET /studies/v1  v0.1      │  Step / flow      │
-│                        │                             │  properties +     │
-│ ► get_studies/v1       │  ○ START                    │  config editor    │
-│   sapio/studies/v1     │  │                          │                   │
-│                        │  ┌─────────────────────┐   │                   │
-│                        │  │ Route               │   │                   │
-│                        │  │ study_papi_router    │   │                   │
-│                        │  └─────────────────────┘   │                   │
-│                        │  │                          │                   │
-│                        │  ┌─────────────────────┐   │                   │
-│                        │  │ Operate             │   │                   │
-│                        │  │ study_papi_func...   │   │                   │
-│                        │  └─────────────────────┘   │                   │
-│                        │  │                          │                   │
-│                        │  ○ END  [+ Add Step]        │                   │
-├────────────────────────┴─────────────────────────────┴───────────────────┤
-│ ▼ Output  [YAML] [JSON]  [Copy] [↓ YAML] [↓ JSON]                       │
-│ <live syntax-highlighted preview>                                        │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-## Step types
-
-| Type | Purpose | Colour |
-|------|---------|--------|
-| **Route** | Conditional routing — evaluates rules to pick the next step | Blue |
-| **Operate** | Invokes an external system (Lambda, HTTP, SQS, DynamoDB) | Green |
-| **Transform** | Transforms data using a JMESPath expression | Amber |
-
-### Conditional branching
-
-An **Operate** step can declare `output.checks` — named predicates that redirect execution to a different step when true. The step-level `next` is the fallback path when no predicate matches.
+The **Processor** suggestions for each step type come from `src/config/processors.yaml`:
 
 ```yaml
-output:
-  value: "@"
-  checks:
-    sequencescape_success:
-      predicate: "data!=null && data.statusCode!=null && (data.statusCode==`200`||data.statusCode==`201`)"
-      next: mlwh_sapi_function_connector
-next: sequencescape_notification_transformer
+Operate:
+  - ipaas_framework.operate.lambda_connector.LambdaConnector
+  - ipaas_framework.operate.sns.sns_connector.SNSConnector
+  # ...
+Transform:
+  - ipaas_framework.transform.jmespath_transformer.JMESPathTransformer
 ```
 
-The canvas shows each check inline beside the step as `✓ check_name → destination`.
+To add a processor, add its class path under the right step type. The top-level keys must match the step type names exactly (`Validate`, `Enrich`, `Transform`, `Route`, `Operate`). A type with no entry simply shows no suggestions; you can still type any class path. The dev server picks up changes on reload; for a deployed copy, rebuild with `npm run build`.
 
-### On-error-continue
+## Project structure
 
-Any step can declare `on-error-continue` to catch named exceptions and redirect execution rather than halting the flow:
-
-```yaml
-on-error-continue:
-  exceptions: ["Exception"]
-  next: study_creation_papi_dlq_connector
+```
+integration-designer/
+├── index.html                 # App entry page
+├── public/favicon.svg         # Favicon
+├── vite.config.js             # Vite config (ports)
+└── src/
+    ├── main.js                # Bootstraps Vue and Pinia; restores saved state
+    ├── App.vue                # Top bar, three-column layout, global styles
+    ├── components/
+    │   ├── FlowSidebar.vue    # Flow list and new-flow form
+    │   ├── FlowCanvas.vue     # Pipeline canvas with zoom and pan
+    │   ├── StepCard.vue       # A step on the canvas
+    │   ├── EditorPanel.vue    # Flow, step and config editors
+    │   ├── SelectMenu.vue     # Dropdown / combobox used across the editor
+    │   └── OutputPanel.vue    # Live YAML/JSON preview, copy and download
+    ├── stores/flows.js        # Pinia store: flows, steps, configs, persistence, example data
+    ├── utils/
+    │   ├── generator.js       # Builds the YAML and JSON output
+    │   └── stepTypes.js       # Step types and their colours
+    └── config/processors.yaml # Processor suggestions per step type
 ```
 
-## Config block types
+## Troubleshooting
 
-The editor surfaces a type-specific form for each config block. The type also determines which processor class is typically used in the step.
+**`npm run dev` fails with an ES module or `.bin/vite` error.**
+On Node 20 with some npm versions, the `.bin/vite` shim isn't recognised as an ES module. The npm scripts work around this by running `node node_modules/vite/bin/vite.js` directly, so always start the app with `npm run dev` rather than `npx vite`.
 
-| Type | Key fields |
-|------|-----------|
-| `route` | `rules` — map of `{ field, value, destination }` |
-| `lambda_function` | `invocation_type` (`RequestResponse` / `Event`) |
-| `http_connector` | `provider_key`, `raw_auth_config` (OAuth2 / Bearer / Basic), `max_retries`, `timeout` |
-| `mapping` | `engine: jmespath`, `spec` — JMESPath expression |
-| `sqs` | `operation`, `queue_name` |
-| `dynamodb` | `operation`, `partition_key`, `sort_key`, `table_name`, `region_name` |
-| `mock` | `file` — path to a mock response JSON |
+**Port 3000 is already in use.**
+Stop whatever is using it, or change `server.port` (and `preview.port`) in `vite.config.js`.
 
-## Batch execution
+**My flows disappeared.**
+Work is kept in the browser's `localStorage`, so it doesn't carry over to another browser, a private window or a cleared profile. Keep downloaded YAML and JSON files as your source of truth.
 
-Flows can run in batch mode — the framework splits an array from the incoming payload and runs the pipeline once per record:
-
-```yaml
-execution:
-  type: batch
-  batch_input_path: body.Records
-```
-
-Toggle **Batch Execution** in the flow properties panel to enable this.
-
-## Persistence
-
-State is automatically saved to `localStorage` on every change. Refreshing the page restores the last session. Use **Clear All** in the top bar to reset.
+**The mouse wheel zooms instead of scrolling the canvas.**
+That's intended. Drag the background or use the scrollbars to move around.
 
 ## Tech stack
 
-- [Vue 3](https://vuejs.org/) with Composition API
+- [Vue 3](https://vuejs.org/) with the Composition API
 - [Pinia](https://pinia.vuejs.org/) for state management
-- [js-yaml](https://github.com/nodeca/js-yaml) for YAML serialisation
+- [js-yaml](https://github.com/nodeca/js-yaml) for YAML parsing and output
 - [Vite 5](https://vitejs.dev/) for development and bundling
-- [Express](https://expressjs.com/) for production serving (`npm run serve`)
-
-## Known quirk
-
-On Node 20 with some npm versions the `.bin/vite` shim is not recognised as an ES module. The `npm run dev` script bypasses this by calling `node node_modules/vite/bin/vite.js` directly.

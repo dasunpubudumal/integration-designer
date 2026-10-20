@@ -157,6 +157,31 @@ export const useFlowStore = defineStore('flows', () => {
     delete configs.value[key]
   }
 
+  // Returns base, or base_2, base_3… if taken
+  function uniqueConfigKey(base) {
+    let key = base
+    for (let n = 2; configs.value[key]; n++) key = `${base}_${n}`
+    return key
+  }
+
+  // Renames a config in place (keeping its position in the output) and
+  // repoints every step, in every flow, that referenced the old key
+  function renameConfig(oldKey, newKey) {
+    if (!configs.value[oldKey] || configs.value[newKey]) return
+    configs.value = Object.fromEntries(
+      Object.entries(configs.value).map(([k, cfg]) => {
+        if (k !== oldKey) return [k, cfg]
+        // Keep an auto-generated name in step with the key
+        return [newKey, cfg.name === oldKey ? { ...cfg, name: newKey } : cfg]
+      })
+    )
+    for (const flow of flows.value) {
+      for (const step of flow.steps) {
+        if (step.configKey === oldKey) step.configKey = newKey
+      }
+    }
+  }
+
   // ── Persist / Import / Export ─────────────────────────────────────────────────
 
   function exportState() {
@@ -534,6 +559,8 @@ export const useFlowStore = defineStore('flows', () => {
     moveStep,
     saveConfig,
     deleteConfig,
+    uniqueConfigKey,
+    renameConfig,
     loadExample,
     exportState,
     importState,

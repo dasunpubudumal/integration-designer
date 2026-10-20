@@ -12,34 +12,33 @@
         <div class="editor-section">
           <div class="form-group">
             <label>Flow Name</label>
-            <input v-model="flowForm.name" @blur="saveFlow" spellcheck="false" />
+            <input v-model="flowForm.name" spellcheck="false" />
           </div>
           <div class="form-row">
             <div class="form-group">
               <label>Method</label>
-              <select v-model="flowForm.method" @change="saveFlow">
-                <option v-for="m in methods" :key="m" :value="m">{{ m }}</option>
-              </select>
+              <SelectMenu v-model="flowForm.method" :options="methods" />
             </div>
             <div class="form-group">
               <label>Version</label>
-              <input v-model="flowForm.version" @blur="saveFlow" />
+              <input v-model="flowForm.version" />
             </div>
           </div>
           <div class="form-group">
             <label>Path</label>
-            <input v-model="flowForm.path" @blur="saveFlow" spellcheck="false" />
+            <input v-model="flowForm.path" spellcheck="false" />
           </div>
           <div class="form-group">
             <label>Layer</label>
-            <input v-model="flowForm.layer" @blur="saveFlow" />
+            <input v-model="flowForm.layer" />
           </div>
           <div class="form-group">
             <label>Start Step</label>
-            <select v-model="flowForm.start" @change="saveFlow">
-              <option value="">-- Select --</option>
-              <option v-for="sid in store.allStepIds" :key="sid" :value="sid">{{ sid }}</option>
-            </select>
+            <SelectMenu
+              v-model="flowForm.start"
+              :options="[{ value: '', label: 'None' }, ...store.allStepIds]"
+              placeholder="Select a step"
+            />
           </div>
 
           <!-- Execution block -->
@@ -52,11 +51,11 @@
           <template v-if="hasExecution && flowForm.execution">
             <div class="form-group">
               <label>Execution Type</label>
-              <input v-model="flowForm.execution.type" @blur="saveFlow" placeholder="batch" />
+              <input v-model="flowForm.execution.type" placeholder="batch" />
             </div>
             <div class="form-group">
               <label>Batch Input Path</label>
-              <input v-model="flowForm.execution.batch_input_path" @blur="saveFlow" placeholder="body.Records" />
+              <input v-model="flowForm.execution.batch_input_path" placeholder="body.Records" />
             </div>
           </template>
         </div>
@@ -71,50 +70,38 @@
         <div class="editor-section">
           <div class="form-group">
             <label>Step ID</label>
-            <input v-model="stepForm.stepId" @blur="saveStep" spellcheck="false" />
+            <input v-model="stepForm.stepId" spellcheck="false" />
           </div>
           <div class="form-row">
             <div class="form-group">
               <label>Type</label>
-              <select v-model="stepForm.type" @change="onTypeChange">
-                <option v-for="t in stepTypes" :key="t" :value="t">{{ t }}</option>
-              </select>
+              <SelectMenu v-model="stepForm.type" :options="stepTypeOptions" @change="onTypeChange" />
             </div>
             <div class="form-group">
               <label>Next</label>
-              <input
+              <SelectMenu
                 v-model="stepForm.next"
-                list="next-options"
-                @blur="saveStep"
+                :options="nextOptions"
+                editable
                 placeholder="END or step ID"
-                spellcheck="false"
               />
-              <datalist id="next-options">
-                <option value="END" />
-                <option v-for="sid in store.allStepIds" :key="sid" :value="sid" />
-              </datalist>
             </div>
           </div>
 
           <div class="form-group">
             <label>Processor</label>
-            <input
+            <SelectMenu
               v-model="stepForm.processor"
-              list="processor-options"
-              @blur="saveStep"
-              spellcheck="false"
+              :options="processorSuggestions"
+              editable
               placeholder="processor class path"
             />
-            <datalist id="processor-options">
-              <option v-for="p in processorSuggestions" :key="p" :value="p" />
-            </datalist>
           </div>
 
           <div class="form-group">
             <label>Input Expression</label>
             <textarea
               v-model="stepForm.input"
-              @blur="saveStep"
               rows="2"
               placeholder="e.g. step.init.input  or  {body: step.x.output}"
               spellcheck="false"
@@ -129,7 +116,7 @@
           <div v-if="Object.keys(stepForm.outputChecks).length > 0">
             <div class="form-group">
               <label>Output Value Expression</label>
-              <input v-model="stepForm.outputValue" @blur="saveStep" placeholder="@" />
+              <input v-model="stepForm.outputValue" placeholder="@" />
             </div>
             <div
               v-for="(check, name) in stepForm.outputChecks"
@@ -150,7 +137,6 @@
                 <label>Predicate</label>
                 <textarea
                   v-model="check.predicate"
-                  @blur="saveStep"
                   rows="2"
                   placeholder="JMESPath expression"
                   spellcheck="false"
@@ -158,16 +144,7 @@
               </div>
               <div class="form-group">
                 <label>Next (if true)</label>
-                <input
-                  v-model="check.next"
-                  list="next-options-check"
-                  @blur="saveStep"
-                  spellcheck="false"
-                />
-                <datalist id="next-options-check">
-                  <option value="END" />
-                  <option v-for="sid in store.allStepIds" :key="sid" :value="sid" />
-                </datalist>
+                <SelectMenu v-model="check.next" :options="nextOptions" editable placeholder="END or step ID" />
               </div>
             </div>
           </div>
@@ -177,7 +154,7 @@
           <div class="subsection-header">On-Error-Continue</div>
           <div class="form-group">
             <label>
-              <input type="checkbox" v-model="stepForm.oecEnabled" @change="saveStep" style="width:auto;margin-right:5px" />
+              <input type="checkbox" v-model="stepForm.oecEnabled" style="width:auto;margin-right:5px" />
               Enable on-error-continue
             </label>
           </div>
@@ -186,49 +163,49 @@
               <label>Exceptions (comma-separated)</label>
               <input
                 v-model="stepForm.oecExceptions"
-                @blur="saveStep"
                 placeholder="Exception, RuntimeError"
                 spellcheck="false"
               />
             </div>
             <div class="form-group">
               <label>Next on error</label>
-              <input
-                v-model="stepForm.oecNext"
-                list="next-options-oec"
-                @blur="saveStep"
-                spellcheck="false"
-              />
-              <datalist id="next-options-oec">
-                <option value="END" />
-                <option v-for="sid in store.allStepIds" :key="sid" :value="sid" />
-              </datalist>
+              <SelectMenu v-model="stepForm.oecNext" :options="nextOptions" editable placeholder="END or step ID" />
             </div>
           </template>
         </div>
 
         <!-- ── Config Section ──────────────────────────────────────────── -->
-        <div class="section-header" style="margin-top:0">Config</div>
+        <div class="section-header" style="margin-top:0;display:flex;align-items:center;justify-content:space-between">
+          <span>Config</span>
+          <button class="btn btn-ghost btn-sm" title="Create a new config for this step" @click="startNewConfig">+ New Config</button>
+        </div>
         <div class="editor-section">
           <div class="form-group">
             <label>Config Key</label>
-            <input
-              v-model="configKey"
-              list="config-keys-list"
-              @blur="onConfigKeyBlur"
+            <SelectMenu
+              ref="configKeyInput"
+              :model-value="configKey"
+              :options="Object.keys(store.configs)"
+              editable
               placeholder="e.g. get_studies_papi_route"
-              spellcheck="false"
+              @update:model-value="onConfigKeyInput"
+              @select="linkExistingConfig"
+              @change="onConfigKeyCommit"
             />
-            <datalist id="config-keys-list">
-              <option v-for="k in Object.keys(store.configs)" :key="k" :value="k" />
-            </datalist>
+            <div v-if="configKeyTaken" class="hint-text">
+              "{{ configKey.trim() }}" already exists. Pick it from the list to use it for this step.
+            </div>
+            <div v-else-if="!store.selectedStep?.configKey" class="hint-text">
+              Type a key to create a config from the fields below, or pick an existing one.
+            </div>
+            <div v-else class="hint-text">
+              Typing renames this config; pick from the list to use another one.
+            </div>
           </div>
 
           <div class="form-group">
             <label>Config Type</label>
-            <select v-model="configForm.type" @change="onConfigTypeChange">
-              <option v-for="t in configTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
-            </select>
+            <SelectMenu v-model="configForm.type" :options="configTypes" @change="onConfigTypeChange" />
           </div>
 
           <div class="form-group">
@@ -273,10 +250,7 @@
               </div>
               <div class="form-group">
                 <label>Destination</label>
-                <input v-model="rule.destination" list="next-options-rule" spellcheck="false" />
-                <datalist id="next-options-rule">
-                  <option v-for="sid in store.allStepIds" :key="sid" :value="sid" />
-                </datalist>
+                <SelectMenu v-model="rule.destination" :options="store.allStepIds" editable placeholder="step ID" />
               </div>
             </div>
           </template>
@@ -285,10 +259,7 @@
           <template v-else-if="configForm.type === 'lambda_function'">
             <div class="form-group">
               <label>Invocation Type</label>
-              <select v-model="configForm.invocation_type">
-                <option value="RequestResponse">RequestResponse</option>
-                <option value="Event">Event</option>
-              </select>
+              <SelectMenu v-model="configForm.invocation_type" :options="['RequestResponse', 'Event']" />
             </div>
           </template>
 
@@ -301,12 +272,10 @@
             <div class="subsection-header">Auth Config</div>
             <div class="form-group">
               <label>Auth Type</label>
-              <select v-model="configForm.auth_type">
-                <option value="OAUTH_CLIENT_CREDENTIALS">OAUTH_CLIENT_CREDENTIALS</option>
-                <option value="BEARER_TOKEN">BEARER_TOKEN</option>
-                <option value="BASIC">BASIC</option>
-                <option value="NONE">NONE</option>
-              </select>
+              <SelectMenu
+                v-model="configForm.auth_type"
+                :options="['OAUTH_CLIENT_CREDENTIALS', 'BEARER_TOKEN', 'BASIC', 'NONE']"
+              />
             </div>
             <div class="form-group">
               <label>Token URL</label>
@@ -352,6 +321,30 @@
             </div>
           </template>
 
+          <!-- schema fields -->
+          <template v-else-if="configForm.type === 'schema'">
+            <div class="form-group">
+              <label>Spec Engine</label>
+              <input value="jsonschema" readonly style="color:var(--text-muted)" />
+            </div>
+            <div class="form-group">
+              <label>Spec S3 URI</label>
+              <input v-model="configForm.spec_s3_uri" placeholder="http://schema-registry.sanger.ac.uk/v1/" spellcheck="false" />
+            </div>
+            <div class="form-group">
+              <label>Spec (JSON Schema)</label>
+              <textarea
+                v-model="configForm.spec"
+                rows="12"
+                placeholder='{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}'
+                spellcheck="false"
+              />
+              <div v-if="schemaSpecError" class="hint-text" style="color:var(--red)">
+                Invalid JSON, so it is output as typed: {{ schemaSpecError }}
+              </div>
+            </div>
+          </template>
+
           <!-- sqs fields -->
           <template v-else-if="configForm.type === 'sqs'">
             <div class="form-group">
@@ -364,16 +357,76 @@
             </div>
           </template>
 
+          <!-- sns_publish fields -->
+          <template v-else-if="configForm.type === 'sns_publish'">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Operation</label>
+                <input v-model="configForm.operation" placeholder="publish" />
+              </div>
+              <div class="form-group">
+                <label>Max Retries</label>
+                <input v-model.number="configForm.max_retries" type="number" min="0" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Topic ARN</label>
+              <input v-model="configForm.topic_arn" placeholder="env:MY_SNS_TOPIC_ARN" spellcheck="false" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Message Structure</label>
+                <input v-model="configForm.message_structure" placeholder="json" />
+              </div>
+              <div class="form-group">
+                <label>Input Path</label>
+                <input v-model="configForm.input_path" placeholder="@" spellcheck="false" />
+              </div>
+            </div>
+            <div class="subsection-header">
+              Message Attributes
+              <button class="btn btn-ghost btn-sm" @click="addMessageAttribute">+ Attribute</button>
+            </div>
+            <div
+              v-for="(attr, idx) in configForm.message_attributes"
+              :key="idx"
+              class="check-block"
+            >
+              <div class="check-header">
+                <input
+                  v-model="attr.name"
+                  class="check-name-input"
+                  placeholder="attribute name"
+                  spellcheck="false"
+                />
+                <button class="btn btn-ghost btn-sm" style="color:var(--red)" @click="removeMessageAttribute(idx)">✕</button>
+              </div>
+              <div class="form-row" style="margin-top:4px">
+                <div class="form-group">
+                  <label>Path</label>
+                  <input v-model="attr.path" placeholder="messageVersion" spellcheck="false" />
+                </div>
+                <div class="form-group">
+                  <label>Default</label>
+                  <input v-model="attr.default" placeholder="v1.0.0" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Data Type</label>
+                <SelectMenu v-model="attr.data_type" :options="['String', 'String.Array', 'Number', 'Binary']" />
+              </div>
+            </div>
+            <div v-if="configForm.message_attributes.length === 0" class="hint-text">No message attributes.</div>
+          </template>
+
           <!-- dynamodb fields -->
           <template v-else-if="configForm.type === 'dynamodb'">
             <div class="form-group">
               <label>Operation</label>
-              <select v-model="configForm.operation">
-                <option value="PUT_ITEM">PUT_ITEM</option>
-                <option value="GET_ITEM">GET_ITEM</option>
-                <option value="DELETE_ITEM">DELETE_ITEM</option>
-                <option value="UPDATE_ITEM">UPDATE_ITEM</option>
-              </select>
+              <SelectMenu
+                v-model="configForm.operation"
+                :options="['PUT_ITEM', 'GET_ITEM', 'DELETE_ITEM', 'UPDATE_ITEM']"
+              />
             </div>
             <div class="form-row">
               <div class="form-group">
@@ -404,7 +457,6 @@
           </template>
 
           <div class="config-actions">
-            <button class="btn btn-primary" @click="handleSaveConfig">Save Config</button>
             <button
               v-if="configKey && store.configs[configKey]"
               class="btn btn-danger btn-sm"
@@ -418,31 +470,52 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed } from 'vue'
+import { ref, reactive, watch, computed, nextTick } from 'vue'
 import { useFlowStore } from '../stores/flows'
 import * as jsYaml from 'js-yaml'
 import processorsRaw from '../config/processors.yaml?raw'
+import SelectMenu from './SelectMenu.vue'
+import { STEP_TYPES, stepTypeColor } from '../utils/stepTypes'
 
 const store = useFlowStore()
 
 const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
-const stepTypes = ['Route', 'Operate', 'Transform']
+const stepTypeOptions = STEP_TYPES.map(t => ({ value: t, label: t, color: stepTypeColor(t) }))
 
 const configTypes = [
   { value: 'route', label: 'Route' },
   { value: 'lambda_function', label: 'Lambda Function' },
   { value: 'http_connector', label: 'HTTP Connector' },
   { value: 'mapping', label: 'Mapping (JMESPath)' },
+  { value: 'schema', label: 'Schema Validation' },
   { value: 'sqs', label: 'SQS' },
+  { value: 'sns_publish', label: 'SNS Publish' },
   { value: 'dynamodb', label: 'DynamoDB' },
   { value: 'mock', label: 'Mock' }
 ]
 
 const processorsByType = jsYaml.load(processorsRaw)
 
+const nextOptions = computed(() => ['END', ...store.allStepIds])
+
 const processorSuggestions = computed(() => {
   return processorsByType[stepForm.type] || []
 })
+
+// ── Autosave ───────────────────────────────────────────────────────────────
+// Form edits are written to the store as they happen so the output panel
+// updates live. Loading a form from the store must not write back.
+
+let autosavePaused = false
+
+function withoutAutosave(fn) {
+  autosavePaused = true
+  try {
+    fn()
+  } finally {
+    autosavePaused = false
+  }
+}
 
 // ── Flow form ──────────────────────────────────────────────────────────────
 
@@ -475,17 +548,18 @@ function syncFlowForm(flow) {
   }
 }
 
+// Re-sync when the selection changes (also on returning from a step, since
+// renaming a step can change flow.start). Saving replaces the store object,
+// so watching the object itself would re-sync on every keystroke.
 watch(
-  () => store.selectedFlow,
-  flow => syncFlowForm(flow),
-  { immediate: true, deep: false }
+  () => [store.selectedFlow?.id, store.selectedStepId],
+  () => withoutAutosave(() => syncFlowForm(store.selectedFlow)),
+  { immediate: true }
 )
 
-// When selected flow id changes, re-sync
-watch(
-  () => store.selectedFlowId,
-  () => syncFlowForm(store.selectedFlow)
-)
+watch([flowForm, hasExecution], () => {
+  if (!autosavePaused) saveFlow()
+}, { deep: true, flush: 'sync' })
 
 function saveFlow() {
   if (!store.selectedFlow) return
@@ -506,7 +580,6 @@ function onExecutionToggle() {
   } else {
     flowForm.execution = null
   }
-  saveFlow()
 }
 
 // ── Step form ──────────────────────────────────────────────────────────────
@@ -525,6 +598,7 @@ const stepForm = reactive({
 })
 
 const configKey = ref('')
+let keyEditOrigin = null
 const configForm = reactive({
   type: 'lambda_function',
   name: '',
@@ -540,6 +614,11 @@ const configForm = reactive({
   max_retries: 3,
   timeout: 30000,
   spec: '',
+  spec_s3_uri: '',
+  topic_arn: '',
+  message_structure: 'json',
+  message_attributes: [],
+  input_path: '@',
   operation: 'send_message',
   queue_name: '',
   partition_key: 'pk',
@@ -580,6 +659,7 @@ function syncStepForm(step) {
 
   // Config
   configKey.value = step.configKey || ''
+  keyEditOrigin = null
   if (step.configKey && store.configs[step.configKey]) {
     loadConfigForm(store.configs[step.configKey])
   } else {
@@ -588,15 +668,21 @@ function syncStepForm(step) {
 }
 
 watch(
-  () => store.selectedStep,
-  step => syncStepForm(step),
-  { immediate: true, deep: false }
+  () => store.selectedStep?.id,
+  () => withoutAutosave(() => syncStepForm(store.selectedStep)),
+  { immediate: true }
 )
 
-watch(
-  () => store.selectedStepId,
-  () => syncStepForm(store.selectedStep)
-)
+watch(stepForm, () => {
+  if (!autosavePaused) saveStep()
+}, { deep: true, flush: 'sync' })
+
+// Edits go to the step's committed config key (the key input commits on blur,
+// so typing a new key doesn't create a config for every prefix)
+watch(configForm, () => {
+  const key = store.selectedStep?.configKey
+  if (!autosavePaused && key) store.saveConfig(key, buildConfigData())
+}, { deep: true, flush: 'sync' })
 
 function saveStep() {
   if (!store.selectedStep) return
@@ -616,7 +702,6 @@ function saveStep() {
     input: stepForm.input,
     next: stepForm.next,
     output,
-    configKey: configKey.value,
     onErrorContinue: stepForm.oecEnabled
       ? { enabled: true, exceptions, next: stepForm.oecNext }
       : null
@@ -631,7 +716,6 @@ function onTypeChange() {
       stepForm.processor = suggestions[0]
     }
   }
-  saveStep()
 }
 
 // Output checks
@@ -642,7 +726,6 @@ function addOutputCheck() {
 
 function removeOutputCheck(name) {
   delete stepForm.outputChecks[name]
-  saveStep()
 }
 
 function renameCheck(oldName, newName) {
@@ -650,7 +733,6 @@ function renameCheck(oldName, newName) {
   const val = stepForm.outputChecks[oldName]
   delete stepForm.outputChecks[oldName]
   stepForm.outputChecks[newName] = val
-  saveStep()
 }
 
 // Rules
@@ -671,14 +753,73 @@ function renameRule(oldName, newName) {
 }
 
 // Config key autocomplete
-function onConfigKeyBlur() {
-  // Update the step's configKey in the store immediately
-  if (store.selectedStep) {
-    store.updateStep(store.selectedStep.id, { configKey: configKey.value })
+// Config key editing. Typing renames the step's config live (or creates one if
+// the step has none); picking from the list switches to an existing config.
+// keyEditOrigin (declared with configKey) remembers the key from before typing
+// started, so switching to an existing config afterwards can undo the rename.
+
+const configKeyTaken = computed(() => {
+  const key = configKey.value.trim()
+  return !!key && key !== store.selectedStep?.configKey && !!store.configs[key]
+})
+
+function onConfigKeyInput(value) {
+  configKey.value = value
+  const step = store.selectedStep
+  if (!step) return
+  if (keyEditOrigin === null) keyEditOrigin = step.configKey || ''
+
+  const key = value.trim()
+  const current = step.configKey
+  // Empty or clashing keys wait for a pick or blur rather than clobbering anything
+  if (!key || key === current || store.configs[key]) return
+
+  if (current && store.configs[current]) {
+    store.renameConfig(current, key)
+    if (configForm.name === current) withoutAutosave(() => { configForm.name = key })
+  } else {
+    if (!configForm.name) withoutAutosave(() => { configForm.name = key })
+    store.saveConfig(key, buildConfigData())
+    store.updateStep(step.id, { configKey: key })
   }
-  // If config key maps to existing config, load it
-  if (configKey.value && store.configs[configKey.value]) {
-    loadConfigForm(store.configs[configKey.value])
+}
+
+function undoKeyEdit() {
+  const step = store.selectedStep
+  const origin = keyEditOrigin
+  keyEditOrigin = null
+  if (!step || origin === null || step.configKey === origin) return
+  if (origin) {
+    store.renameConfig(step.configKey, origin)
+  } else if (step.configKey) {
+    // The config was created while typing; drop it
+    store.deleteConfig(step.configKey)
+    store.updateStep(step.id, { configKey: '' })
+  }
+}
+
+function linkExistingConfig(key) {
+  const step = store.selectedStep
+  if (!step || !store.configs[key]) return
+  if (key !== step.configKey) {
+    undoKeyEdit()
+    store.updateStep(step.id, { configKey: key })
+  }
+  keyEditOrigin = null
+  configKey.value = key
+  withoutAutosave(() => loadConfigForm(store.configs[key]))
+}
+
+function onConfigKeyCommit() {
+  const step = store.selectedStep
+  if (!step) return
+  const key = configKey.value.trim()
+  if (configKeyTaken.value) {
+    linkExistingConfig(key)
+  } else {
+    // Blank (or untouched) input: show the key the step actually has
+    configKey.value = step.configKey || ''
+    keyEditOrigin = null
   }
 }
 
@@ -702,9 +843,23 @@ function loadConfigForm(cfg) {
   configForm.timeout = cfg.timeout !== undefined ? cfg.timeout : 30000
   // mapping
   configForm.spec = cfg.spec || ''
+  configForm.spec_s3_uri = cfg.spec_s3_uri || ''
+  // The schema spec is stored as a compact JSON string; pretty-print it for editing
+  if (cfg.type === 'schema' && configForm.spec) {
+    try {
+      configForm.spec = JSON.stringify(JSON.parse(configForm.spec), null, 2)
+    } catch {
+      // Leave invalid JSON as-is
+    }
+  }
   // sqs
   configForm.operation = cfg.operation || 'send_message'
   configForm.queue_name = cfg.queue_name || ''
+  // sns_publish
+  configForm.topic_arn = cfg.sns_config?.topic_arn || ''
+  configForm.message_structure = cfg.sns_config?.message_structure || 'json'
+  configForm.message_attributes = JSON.parse(JSON.stringify(cfg.sns_config?.message_attributes || []))
+  configForm.input_path = cfg.input_path || '@'
   // dynamodb
   configForm.partition_key = cfg.partition_key || 'pk'
   configForm.sort_key = cfg.sort_key || 'sk'
@@ -731,8 +886,13 @@ function resetConfigForm() {
   configForm.max_retries = 3
   configForm.timeout = 30000
   configForm.spec = ''
+  configForm.spec_s3_uri = ''
   configForm.operation = 'send_message'
   configForm.queue_name = ''
+  configForm.topic_arn = ''
+  configForm.message_structure = 'json'
+  configForm.message_attributes = []
+  configForm.input_path = '@'
   configForm.partition_key = 'pk'
   configForm.sort_key = 'sk'
   configForm.table_name = ''
@@ -748,6 +908,18 @@ function onConfigTypeChange() {
       configForm.rules = {}
     }
   }
+  // Operation is shared across types; switch to the new type's default
+  const defaultOperation = { sqs: 'send_message', sns_publish: 'publish', dynamodb: 'PUT_ITEM' }[configForm.type]
+  if (defaultOperation) configForm.operation = defaultOperation
+}
+
+// SNS message attributes
+function addMessageAttribute() {
+  configForm.message_attributes.push({ name: '', path: '', default: '', data_type: 'String' })
+}
+
+function removeMessageAttribute(idx) {
+  configForm.message_attributes.splice(idx, 1)
 }
 
 function buildConfigData() {
@@ -783,8 +955,31 @@ function buildConfigData() {
     case 'mapping':
       return { ...base, engine: 'jmespath', spec: configForm.spec }
 
+    case 'schema':
+      return {
+        version: base.version,
+        name: base.name,
+        spec_engine: 'jsonschema',
+        type: base.type,
+        spec_s3_uri: configForm.spec_s3_uri,
+        spec: compactJson(configForm.spec)
+      }
+
     case 'sqs':
       return { ...base, operation: configForm.operation, queue_name: configForm.queue_name, channels: {} }
+
+    case 'sns_publish':
+      return {
+        ...base,
+        max_retries: configForm.max_retries,
+        operation: configForm.operation,
+        sns_config: {
+          topic_arn: configForm.topic_arn,
+          message_structure: configForm.message_structure,
+          message_attributes: JSON.parse(JSON.stringify(configForm.message_attributes))
+        },
+        input_path: configForm.input_path
+      }
 
     case 'dynamodb':
       return {
@@ -804,20 +999,69 @@ function buildConfigData() {
   }
 }
 
-function handleSaveConfig() {
-  if (!configKey.value.trim()) {
-    alert('Please enter a config key.')
-    return
+const schemaSpecError = computed(() => {
+  if (configForm.type !== 'schema' || !configForm.spec.trim()) return ''
+  try {
+    JSON.parse(configForm.spec)
+    return ''
+  } catch (e) {
+    return e.message
   }
-  const data = buildConfigData()
-  store.saveConfig(configKey.value.trim(), data)
-  // Also update step's configKey
-  saveStep()
+})
+
+// Store the schema as a single-line JSON string, as the runtime expects
+function compactJson(text) {
+  try {
+    return JSON.stringify(JSON.parse(text))
+  } catch {
+    return text
+  }
+}
+
+// Guess the config type from the step's processor, e.g. ...SNSConnector → sns_publish
+const configTypeByProcessor = [
+  [/router/i, 'route'],
+  [/lambda/i, 'lambda_function'],
+  [/http/i, 'http_connector'],
+  [/sqs/i, 'sqs'],
+  [/sns/i, 'sns_publish'],
+  [/dynamodb/i, 'dynamodb'],
+  [/jmespath/i, 'mapping']
+]
+
+const configKeyInput = ref(null)
+
+async function startNewConfig() {
+  const step = store.selectedStep
+  if (!step) return
+  // Create and link it straight away so it shows in the output; the key is
+  // selected so typing renames it
+  const key = store.uniqueConfigKey(step.stepId || 'config')
+  keyEditOrigin = null
+  configKey.value = key
+  withoutAutosave(() => {
+    resetConfigForm()
+    const match = configTypeByProcessor.find(([re]) => re.test(stepForm.processor))
+    if (match) {
+      configForm.type = match[1]
+      onConfigTypeChange()
+    }
+    configForm.name = key
+  })
+  store.saveConfig(key, buildConfigData())
+  store.updateStep(step.id, { configKey: key })
+  // Wait for the input to show the new key before selecting it
+  await nextTick()
+  configKeyInput.value?.focus({ select: true })
 }
 
 function handleDeleteConfig() {
   if (!confirm(`Delete config "${configKey.value}"?`)) return
   store.deleteConfig(configKey.value)
+  // Detach the step so further edits don't silently re-create the config
+  configKey.value = ''
+  if (store.selectedStep) store.updateStep(store.selectedStep.id, { configKey: '' })
+  withoutAutosave(resetConfigForm)
 }
 </script>
 

@@ -83,6 +83,26 @@ describe('steps', () => {
   })
 })
 
+describe('addNewStep', () => {
+  beforeEach(() => store.createFlow())
+
+  it('adds an Operate step with its own linked config', () => {
+    const step = store.addNewStep()
+    expect(step).toMatchObject({ stepId: 'step_1', type: 'Operate', next: 'END', configKey: 'step_1' })
+    expect(store.configs.step_1).toEqual({
+      version: 'v1.0.0', name: 'step_1', type: 'lambda_function', invocation_type: 'RequestResponse'
+    })
+    expect(store.selectedStep).toEqual(step)
+  })
+
+  it('never overwrites an existing config with the same key', () => {
+    store.saveConfig('step_1', { name: 'keep me' })
+    const step = store.addNewStep()
+    expect(store.configs.step_1).toEqual({ name: 'keep me' })
+    expect(step.configKey).toBe('step_1_2')
+  })
+})
+
 describe('configs', () => {
   it('generates unique config keys', () => {
     expect(store.uniqueConfigKey('step_1')).toBe('step_1')

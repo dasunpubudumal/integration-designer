@@ -11,7 +11,7 @@ Tests run in Node with jsdom; no browser is needed. `npm test` runs everything, 
 
 | Change | Test |
 |--------|------|
-| Logic in `src/utils/` or `src/stores/` | Unit test in `tests/unit/` calling the function or store action directly |
+| Logic in `src/utils/`, `src/config/`, `src/composables/` or `src/stores/` | Unit test in `tests/unit/` calling the function, composable or store action directly |
 | A reusable component's own behaviour (`SelectMenu`) | Unit test mounting just that component |
 | Anything the user does in the UI and sees change (editor fields, output, canvas) | Integration test in `tests/integration/` mounting the whole app |
 

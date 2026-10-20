@@ -19,14 +19,14 @@ Top-level keys must match the step type names in `src/utils/stepTypes.js` exactl
 
 ## 2. Config type
 
-If the processor has its own config shape, check whether a matching config type exists in `configTypes` in `src/components/EditorPanel.vue`.
+If the processor has its own config shape, check whether a matching config type exists in `CONFIG_TYPES` in `src/config/configTypes.js`.
 
-- **It exists:** add `[/pattern/i, '<type>']` to `configTypeByProcessor` so **+ New Config** pre-selects it.
+- **It exists:** make sure that entry's `processor` pattern matches the new class (for example `processor: /sns/i`), so **+ New Config** pre-selects the type. The first matching entry wins, so check the class doesn't match an earlier entry's pattern first.
 - **It doesn't:** ask the user for an example config block, then follow the `add-config-type` skill.
 
 ## 3. Test
 
-`tests/integration/editor.test.js` has a test asserting the SNS connector is suggested for Operate steps. Add or extend a similar assertion for the new class, and, if you mapped it in step 2, a `+ New Config` test that sets the processor and checks the new config's `type`.
+`tests/integration/editor.test.js` has a test asserting the SNS connector is suggested for Operate steps. Add or extend a similar assertion for the new class. If you mapped it in step 2, add a case to the `configTypeForProcessor` table in `tests/unit/configTypes.test.js`.
 
 ## 4. Docs and verify
 

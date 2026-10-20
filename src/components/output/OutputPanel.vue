@@ -23,8 +23,8 @@
           <button class="btn btn-ghost btn-sm" @click="handleCopy" :title="copyStatus">
             {{ copyStatus === 'Copied!' ? '✓ Copied!' : 'Copy' }}
           </button>
-          <button class="btn btn-ghost btn-sm" @click="handleDownloadYaml">&#8595; YAML</button>
-          <button class="btn btn-ghost btn-sm" @click="handleDownloadJson">&#8595; JSON</button>
+          <button class="btn btn-ghost btn-sm" @click="downloadYaml">&#8595; YAML</button>
+          <button class="btn btn-ghost btn-sm" @click="downloadJson">&#8595; JSON</button>
         </div>
       </div>
     </div>
@@ -38,15 +38,22 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useFlowStore } from '../stores/flows'
-import { generateYaml, generateJson } from '../utils/generator'
+import { useGeneratedFiles } from '../../composables/useGeneratedFiles'
+import { highlightYaml, highlightJson } from '../../utils/highlight'
 
-const store = useFlowStore()
+const { yaml, json, downloadYaml, downloadJson } = useGeneratedFiles()
+
 const isCollapsed = ref(false)
 const activeTab = ref('yaml')
 const copyStatus = ref('Copy')
 const panelHeight = ref(320)
 
+const rawOutput = computed(() => (activeTab.value === 'yaml' ? yaml.value : json.value))
+const highlightedOutput = computed(() =>
+  activeTab.value === 'yaml' ? highlightYaml(rawOutput.value) : highlightJson(rawOutput.value)
+)
+
+// Drag the top edge to resize
 function startResize(e) {
   const startY = e.clientY
   const startHeight = panelHeight.value
@@ -65,124 +72,20 @@ function startResize(e) {
   document.addEventListener('mouseup', onUp)
 }
 
-const yamlOutput = computed(() => generateYaml(store.flows, store.configFileName))
-const jsonOutput = computed(() => generateJson(store.configs))
-
-const rawOutput = computed(() => activeTab.value === 'yaml' ? yamlOutput.value : jsonOutput.value)
-
-const highlightedOutput = computed(() => {
-  const text = rawOutput.value
-  if (activeTab.value === 'yaml') {
-    return highlightYaml(text)
-  } else {
-    return highlightJson(text)
-  }
-})
-
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-function highlightYaml(text) {
-  const lines = text.split('\n')
-  return lines.map(line => {
-    const esc = escapeHtml(line)
-
-    // Comment
-    if (/^\s*#/.test(line)) {
-      return `<span class="hl-comment">${esc}</span>`
-    }
-
-    // Key: value
-    const keyMatch = esc.match(/^(\s*)([\w\-\/\.]+)(\s*:)(\s*)(.*)$/)
-    if (keyMatch) {
-      const indent = keyMatch[1]
-      const key = keyMatch[2]
-      const colon = keyMatch[3]
-      const space = keyMatch[4]
-      let value = keyMatch[5]
-
-      // Color value
-      if (value === 'null') {
-        value = `<span class="hl-null">${value}</span>`
-      } else if (value === 'true' || value === 'false') {
-        value = `<span class="hl-bool">${value}</span>`
-      } else if (/^[\d.]+$/.test(value)) {
-        value = `<span class="hl-number">${value}</span>`
-      } else if (value.startsWith('"') || value.startsWith("'")) {
-        value = `<span class="hl-string">${value}</span>`
-      } else if (value.length > 0) {
-        value = `<span class="hl-value">${value}</span>`
-      }
-
-      return `${indent}<span class="hl-key">${key}</span>${colon}${space}${value}`
-    }
-
-    // Array item (- ...)
-    const arrMatch = esc.match(/^(\s*)(-)(\s*)(.*)$/)
-    if (arrMatch) {
-      const indent = arrMatch[1]
-      const dash = arrMatch[2]
-      const space = arrMatch[3]
-      const rest = arrMatch[4]
-      return `${indent}<span class="hl-dash">${dash}</span>${space}${rest}`
-    }
-
-    return esc
-  }).join('\n')
-}
-
-function highlightJson(text) {
-  const esc = escapeHtml(text)
-  return esc
-    // Keys
-    .replace(/"([^"]+)"(\s*:)/g, '<span class="hl-key">"$1"</span>$2')
-    // String values
-    .replace(/:\s*"([^"]*)"/g, (m, v) => `: <span class="hl-string">"${v}"</span>`)
-    // Numbers
-    .replace(/:\s*(\d+)/g, (m, v) => `: <span class="hl-number">${v}</span>`)
-    // Booleans / null
-    .replace(/:\s*(true|false|null)/g, (m, v) => `: <span class="hl-${v === 'null' ? 'null' : 'bool'}">${v}</span>`)
-}
-
 async function handleCopy() {
   try {
     await navigator.clipboard.writeText(rawOutput.value)
-    copyStatus.value = 'Copied!'
-    setTimeout(() => { copyStatus.value = 'Copy' }, 2000)
-  } catch (e) {
-    // Fallback
+  } catch {
+    // Fallback for browsers without clipboard access
     const el = document.createElement('textarea')
     el.value = rawOutput.value
     document.body.appendChild(el)
     el.select()
     document.execCommand('copy')
     document.body.removeChild(el)
-    copyStatus.value = 'Copied!'
-    setTimeout(() => { copyStatus.value = 'Copy' }, 2000)
   }
-}
-
-function handleDownloadYaml() {
-  downloadFile(yamlOutput.value, 'study-papi-config.yaml', 'text/yaml')
-}
-
-function handleDownloadJson() {
-  const name = store.configFileName || 'papi_config.json'
-  downloadFile(jsonOutput.value, name, 'application/json')
-}
-
-function downloadFile(content, filename, mime) {
-  const blob = new Blob([content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
+  copyStatus.value = 'Copied!'
+  setTimeout(() => { copyStatus.value = 'Copy' }, 2000)
 }
 </script>
 

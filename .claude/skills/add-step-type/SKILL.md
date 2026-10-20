@@ -14,16 +14,15 @@ export const STEP_TYPE_COLORS = {
 }
 ```
 
-The key order is the order of the Type dropdown. The colour is used for the dropdown dot, the card badge and the card's left border.
+The key order is the order of the Type dropdown. The colour is used for the dropdown dot, the card badge and the card's left border; nothing else needs a colour.
 
 ## Steps
 
 1. **Define it.** Add `Name: '#hex'` to `STEP_TYPE_COLORS` at the position the user wants. Pick a colour distinct from the others that reads on the dark `--surface2` background.
-2. **Card border.** Add `.step-card--<lowercase name> { border-left-color: #hex; }` next to the others in `src/components/StepCard.vue` (the class comes from `step.type.toLowerCase()`).
-3. **Processors.** Add a `Name:` key with its processor class paths to `src/config/processors.yaml` if the user gives any. Don't invent class names: if none are given, leave the type out of the YAML (it just shows no suggestions) and tell the user.
-4. **Renaming or removing a type:** search for the old name across `src/`, `tests/` and `README.md` (example data in `src/stores/flows.js` uses type names too). Flows saved in users' browsers keep the old value; mention that.
-5. **Tests.** Update the expected list in the `offers the five step types` test in `tests/integration/editor.test.js` (and its name if the count changes).
-6. **Docs.** Update the **Step types** table in `README.md` (type, purpose, colour name) and the count in **Features**. If the type dropdown screenshot is now wrong, use the `update-screenshots` skill.
-7. **Verify.** `npm test` and `npm run build`, then look at the dropdown and a card of the new type in a browser (`verify-in-browser` skill).
+2. **Processors.** Add a `Name:` key with its processor class paths to `src/config/processors.yaml` if the user gives any. Don't invent class names: if none are given, leave the type out of the YAML (it just shows no suggestions) and tell the user.
+3. **Renaming or removing a type:** search for the old name across `src/`, `tests/` and `README.md` (example data in `src/stores/exampleData.js` uses type names too). Flows saved in users' browsers keep the old value; mention that.
+4. **Tests.** Update the expected list in the `offers the five step types` test in `tests/integration/editor.test.js` (and its name if the count changes).
+5. **Docs.** Update the **Step types** table in `README.md` (type, purpose, colour name) and the count in **Features**. If the type dropdown screenshot is now wrong, use the `update-screenshots` skill.
+6. **Verify.** `npm test` and `npm run build`, then look at the dropdown and a card of the new type in a browser (`verify-in-browser` skill).
 
-The default type for new steps is `Operate`, set in `handleAddStep` (`src/components/FlowCanvas.vue`), `addStep` (`src/stores/flows.js`) and the generator's fallback. Change all three if the user wants a different default.
+The default type for new steps is `Operate`, set in `addNewStep` and `addStep` (`src/stores/flows.js`) and the generator's fallback (`src/utils/generator.js`). Change all three if the user wants a different default.

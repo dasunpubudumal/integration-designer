@@ -4,6 +4,8 @@
 [![Integration Tests](https://github.com/dasunpubudumal/integration-designer/actions/workflows/integration-tests.yml/badge.svg?branch=main)](https://github.com/dasunpubudumal/integration-designer/actions/workflows/integration-tests.yml)
 ![Developed with AI](https://img.shields.io/badge/Developed%20with-AI-2E8B85?style=for-the-badge)
 
+**Try it:** [dasunpubudumal.github.io/integration-designer](https://dasunpubudumal.github.io/integration-designer/)
+
 A browser-based visual designer for authoring iPaaS integration flows. You build each flow as a pipeline of steps on a canvas, fill in each step's settings and config in a side panel, and the app generates the two files the iPaaS framework needs:
 
 - **A YAML DSL file** that defines the flows and their steps.
@@ -67,7 +69,7 @@ npm run build     # outputs static files to dist/
 npm run preview   # serves dist/ at http://localhost:3000
 ```
 
-`dist/` is a plain static site, so it can be hosted on any static web server (S3, nginx, GitHub Pages and so on). No backend is needed. `dist/` isn't committed; CI builds it (see [Continuous integration](#continuous-integration)).
+`dist/` is a plain static site, so it can be hosted on any static web server (S3, nginx, GitHub Pages and so on), at the site root or under any path: asset URLs are relative (`base: './'` in `vite.config.js`). No backend is needed. `dist/` isn't committed; CI builds it and deploys it to GitHub Pages (see [Continuous integration](#continuous-integration)).
 
 ### Available scripts
 
@@ -373,26 +375,37 @@ The tests are split into two folders:
 
 | Folder | What it covers |
 |--------|----------------|
-| `tests/unit/` | Single modules on their own. The YAML/JSON generator, the Pinia store (flows, steps, config renaming, persistence) and the `SelectMenu` dropdown (options, keyboard, events). |
+| `tests/unit/` | Single modules on their own. The YAML/JSON generator, the config type registry (every type round-trips unchanged, in key order), the Pinia store (flows, steps, config renaming, persistence), output highlighting (including HTML escaping), the autosave composable and the `SelectMenu` dropdown (options, keyboard, events). |
 | `tests/integration/` | The whole app, mounted and driven the way a user would use it. Typing in the editor and checking the Output panel, adding steps, renaming and switching configs, the Schema Validation and SNS forms, and canvas zoom. |
 
 `tests/integration/helpers.js` has helpers for these tests, such as `mountApp()`, `type(wrapper, 'Label', value)`, `pick(wrapper, 'Label', 'Option')`, `yaml(wrapper)` and `json(wrapper)`. Fields are found by their visible label, so tests read like the UI. `tests/setup.js` stubs the browser APIs jsdom lacks (such as `ResizeObserver`), clears `localStorage` before each test and auto-accepts confirmation dialogs.
 
-When you add a feature, add a unit test for any new logic in `src/utils` or `src/stores`, and an integration test for what the user sees change.
+When you add a feature, add a unit test for any new logic in `src/utils`, `src/config`, `src/composables` or `src/stores`, and an integration test for what the user sees change. To add a config type, add its example block to `EXAMPLES` in `tests/unit/configTypes.test.js`; a guard test fails until you do.
 
 ## Continuous integration
 
-Three GitHub Actions workflows run on every push to `main` and on every pull request. Each uses the Node version from `.nvmrc` and installs dependencies with `npm ci`, exactly as pinned in `package-lock.json`.
+Four GitHub Actions workflows use the Node version from `.nvmrc` and install dependencies with `npm ci`, exactly as pinned in `package-lock.json`. The first three run on every push to `main` and on every pull request; the deployment runs on pushes to `main`.
 
 | Workflow | File | What it does |
 |----------|------|--------------|
 | Unit Tests | `.github/workflows/unit-tests.yml` | Runs `npm run test:unit` |
 | Integration Tests | `.github/workflows/integration-tests.yml` | Runs `npm run test:integration` |
 | Build | `.github/workflows/build.yml` | Runs `npm run build` and uploads `dist/` as an artifact named **dist**, kept for 14 days. Download it from the run's summary page in the **Actions** tab. |
+| Deploy to GitHub Pages | `.github/workflows/deploy-pages.yml` | Runs all tests, builds, and publishes `dist/` to [https://dasunpubudumal.github.io/integration-designer/](https://dasunpubudumal.github.io/integration-designer/). Only deploys if the tests pass. Can also be run by hand from the **Actions** tab (**Run workflow**). |
 
 The badges at the top of this README show the latest result of the two test workflows on `main`. Click a badge to see its runs. The workflows are separate so each badge reports its own suite; they run in parallel, and a failure in one doesn't stop the others.
 
-A new push to the same branch or PR cancels any run of the same workflow already in progress.
+A new push to the same branch or PR cancels any run of the same test or build workflow already in progress. Deployments are never cancelled half-way; a newer one waits for the current one to finish.
+
+### Setting up GitHub Pages (once)
+
+The deployment needs Pages to be switched on for the repository:
+
+1. On GitHub, open the repository's **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Push to `main` (or run **Deploy to GitHub Pages** from the **Actions** tab).
+
+The site URL is shown on the **Settings → Pages** page and in each deployment run's summary. Each visitor's flows are saved in their own browser, as when running locally.
 
 Because CI installs with `npm ci`, commit `package-lock.json` whenever you add or update a dependency.
 
@@ -400,30 +413,35 @@ Because CI installs with `npm ci`, commit `package-lock.json` whenever you add o
 
 ```
 integration-designer/
-├── .claude/                  # Claude Code project guide (CLAUDE.md) and skills
-├── .github/workflows/         # CI: unit tests, integration tests, build
+├── .claude/                   # Claude Code project guide (CLAUDE.md) and skills
+├── .github/workflows/         # CI: unit tests, integration tests, build, Pages deploy
 ├── .nvmrc                     # Node version for nvm and CI
 ├── index.html                 # App entry page
 ├── public/favicon.svg         # Favicon
 ├── vite.config.js             # Vite and Vitest config
 ├── src/
-│   ├── main.js                # Bootstraps Vue and Pinia; restores saved state
-│   ├── App.vue                # Top bar, three-column layout, global styles
+│   ├── main.js                # Bootstraps Vue and Pinia, loads global styles, restores saved state
+│   ├── App.vue                # Page shell: top bar, three columns, output panel
 │   ├── components/
-│   │   ├── FlowSidebar.vue    # Flow list and new-flow form
-│   │   ├── FlowCanvas.vue     # Pipeline canvas with zoom and pan
-│   │   ├── StepCard.vue       # A step on the canvas
-│   │   ├── EditorPanel.vue    # Flow, step and config editors
-│   │   ├── SelectMenu.vue     # Dropdown / combobox used across the editor
-│   │   └── OutputPanel.vue    # Live YAML/JSON preview, copy and download
-│   ├── stores/flows.js        # Pinia store: flows, steps, configs, persistence, example data
-│   ├── utils/
-│   │   ├── generator.js       # Builds the YAML and JSON output
-│   │   └── stepTypes.js       # Step types and their colours
-│   └── config/processors.yaml # Processor suggestions per step type
+│   │   ├── layout/            # AppTopBar: file name, Load Example, Clear All, downloads
+│   │   ├── sidebar/           # FlowSidebar, NewFlowForm, FlowListItem
+│   │   ├── canvas/            # FlowCanvas, FlowHeader, PipelineStep, StepCard
+│   │   ├── editor/            # EditorPanel and the flow, step and config forms
+│   │   │   └── config-fields/ # One fields component per config type
+│   │   ├── output/            # OutputPanel: live YAML/JSON, copy, download
+│   │   └── common/            # SelectMenu: dropdown / combobox used everywhere
+│   ├── composables/           # useAutosave, useCanvasZoomPan, useGeneratedFiles
+│   ├── config/
+│   │   ├── configTypes.js     # Config type registry: how each JSON block is loaded and generated
+│   │   └── processors.yaml    # Processor suggestions per step type
+│   ├── stores/
+│   │   ├── flows.js           # Pinia store: flows, steps, configs, persistence
+│   │   └── exampleData.js     # Data for Load Example
+│   ├── utils/                 # YAML/JSON generator, highlighting, downloads, step types
+│   └── styles/                # global.css (theme, buttons, forms) and editor.css
 └── tests/
     ├── setup.js               # Browser API stubs and per-test reset
-    ├── unit/                  # Generator, store and SelectMenu tests
+    ├── unit/                  # Pure modules, store and SelectMenu
     └── integration/           # Whole-app tests and their helpers
 ```
 

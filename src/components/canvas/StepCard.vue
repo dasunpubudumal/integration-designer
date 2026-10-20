@@ -1,7 +1,8 @@
 <template>
   <div
     class="step-card"
-    :class="['step-card--' + step.type.toLowerCase(), { selected: isSelected }]"
+    :class="{ selected: isSelected }"
+    :style="{ borderLeftColor: typeColor }"
     @click="$emit('select')"
   >
     <!-- Header -->
@@ -41,7 +42,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { stepTypeColor } from '../utils/stepTypes'
+import { stepTypeColor } from '../../utils/stepTypes'
 
 const props = defineProps({
   step: { type: Object, required: true },
@@ -74,11 +75,6 @@ const typeColor = computed(() => stepTypeColor(props.step.type))
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
-.step-card--validate { border-left-color: #8b5cf6; }
-.step-card--enrich   { border-left-color: #ec4899; }
-.step-card--route    { border-left-color: #3b82f6; }
-.step-card--operate  { border-left-color: #10b981; }
-.step-card--transform { border-left-color: #f59e0b; }
 
 .step-card-header {
   display: flex;

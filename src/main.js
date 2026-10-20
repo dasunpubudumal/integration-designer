@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
+import './styles/global.css'
+import './styles/editor.css'
 import { useFlowStore } from './stores/flows'
 
 const app = createApp(App)

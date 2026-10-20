@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import SelectMenu from '../../src/components/SelectMenu.vue'
+import SelectMenu from '../../src/components/common/SelectMenu.vue'
 
 const options = [
   { value: 'route', label: 'Route', color: '#3b82f6' },

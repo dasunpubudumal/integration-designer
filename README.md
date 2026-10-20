@@ -10,6 +10,8 @@ A browser-based visual designer for authoring iPaaS integration flows. You build
 
 Both outputs update live as you edit, and you can copy or download them at any time.
 
+![The designer with the example flows loaded: flows on the left, the pipeline canvas in the middle, step properties on the right and the live YAML output below](docs/screenshots/overview.png)
+
 ## Contents
 
 - [Features](#features)
@@ -157,6 +159,10 @@ Click a step card to open **Step Properties**:
 
 Click **← Flow** to go back to the flow's properties.
 
+<p align="center">
+  <img src="docs/screenshots/step-editor.png" width="380" alt="Step properties with the Type dropdown open, showing Validate, Enrich, Transform, Route and Operate, each with its colour">
+</p>
+
 ### 4. Configure the step
 
 The **Config** section below the step properties edits the JSON config block that the step references.
@@ -171,6 +177,17 @@ The **Config** section below the step properties edits the JSON config block tha
 
 Every change is reflected in the output immediately; there's no save button.
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/config-sns.png" width="360" alt="SNS Publish config form with topic ARN, message structure and a messageVersion message attribute"></td>
+    <td align="center"><img src="docs/screenshots/config-schema.png" width="360" alt="Schema Validation config form with the spec S3 URI and a formatted JSON Schema"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>SNS Publish config</em></td>
+    <td align="center"><em>Schema Validation config</em></td>
+  </tr>
+</table>
+
 ### 5. Get the output
 
 The **Output** panel at the bottom shows both files live:
@@ -179,6 +196,8 @@ The **Output** panel at the bottom shows both files live:
 - **Copy** copies the visible file to the clipboard.
 - **↓ YAML** and **↓ JSON**, or **Download YAML** / **Download JSON** in the top bar, save the files.
 - Drag the panel's top edge to resize it, or click its title bar to collapse it.
+
+![The JSON tab of the Output panel showing the SNS Publish config generated from the form above](docs/screenshots/output-json.png)
 
 The **Config file** name in the top bar is used both as the JSON download's file name and in every step's config reference (`ref:config/<file name>@<key>`). The YAML downloads as `study-papi-config.yaml`.
 
@@ -192,6 +211,8 @@ The **Config file** name in the top bar is used both as the JSON download's file
 | Select a step | Click its card. |
 
 The flow header (method, path, version and layer) stays fixed while you zoom and pan.
+
+![A batch flow on the canvas: colour-coded step cards joined by arrows, with output checks shown beside their steps as check name → destination](docs/screenshots/canvas-branching.png)
 
 ### Saving your work
 

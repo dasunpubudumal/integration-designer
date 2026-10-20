@@ -339,16 +339,20 @@ function handleAddStep() {
 }
 
 .pipeline-step-row {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  width: 100%;
-  max-width: 700px;
   justify-content: center;
+  width: 100%;
+  max-width: 520px;
 }
 
 /* Branch labels */
+/* Hang the labels off the card's right edge so the card stays on the
+   pipeline's centre line, aligned with the connectors */
 .branch-labels {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 16px);
   display: flex;
   flex-direction: column;
   gap: 4px;

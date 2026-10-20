@@ -2,6 +2,7 @@
 
 [![Unit Tests](https://github.com/dasunpubudumal/integration-designer/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/dasunpubudumal/integration-designer/actions/workflows/unit-tests.yml)
 [![Integration Tests](https://github.com/dasunpubudumal/integration-designer/actions/workflows/integration-tests.yml/badge.svg?branch=main)](https://github.com/dasunpubudumal/integration-designer/actions/workflows/integration-tests.yml)
+![Developed with AI](https://img.shields.io/badge/Developed%20with-AI-2E8B85?style=for-the-badge)
 
 A browser-based visual designer for authoring iPaaS integration flows. You build each flow as a pipeline of steps on a canvas, fill in each step's settings and config in a side panel, and the app generates the two files the iPaaS framework needs:
 

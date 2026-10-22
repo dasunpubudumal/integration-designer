@@ -1,7 +1,7 @@
 <template>
   <header class="topbar">
     <div class="topbar-left">
-      <span class="topbar-logo">&#11042; Integration Designer</span>
+      <span class="topbar-logo">&#11042; Switchyard</span>
       <label class="filename-label">
         Config file:
         <input

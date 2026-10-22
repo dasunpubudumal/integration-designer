@@ -142,6 +142,19 @@ describe('SelectMenu (editable)', () => {
     expect(wrapper.emitted('select')).toEqual([['study_connector']])
   })
 
+  it('explains an empty list instead of showing nothing', async () => {
+    const wrapper = mountEditable({ options: [], emptyText: 'Nothing to suggest.' })
+    await wrapper.find('input').trigger('focus')
+    expect(document.querySelector('.select-empty').textContent).toBe('Nothing to suggest.')
+    expect(document.querySelectorAll('.select-option')).toHaveLength(0)
+  })
+
+  it('shows no empty message when typing filters every option out', async () => {
+    const wrapper = mountEditable({ emptyText: 'Nothing to suggest.' })
+    await wrapper.find('input').setValue('zzz')
+    expect(menu()).toBeNull()
+  })
+
   it('can be focused with its text selected', async () => {
     const wrapper = mountEditable({ modelValue: 'step_3' })
     wrapper.vm.focus({ select: true })

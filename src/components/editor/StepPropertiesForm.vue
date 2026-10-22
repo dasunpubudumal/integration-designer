@@ -26,6 +26,7 @@
         :options="processorsFor(form.type)"
         editable
         placeholder="processor class path"
+        :empty-text="`No suggested processors for ${form.type} steps yet. Type a class path.`"
       />
     </div>
 

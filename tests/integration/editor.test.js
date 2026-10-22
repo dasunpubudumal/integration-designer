@@ -39,6 +39,15 @@ describe('live output from the flow and step editors', () => {
     expect(labels).toContain('ipaas_framework.operate.sns.sns_connector.SNSConnector')
   })
 
+  it('says so when a step type has no suggested processors', async () => {
+    await selectStep(wrapper, 1)
+    await pick(wrapper, 'Type', 'Validate')
+    await type(wrapper, 'Processor', '')
+    await input(wrapper, 'Processor').trigger('focus')
+    expect(document.querySelector('.select-empty').textContent)
+      .toBe('No suggested processors for Validate steps yet. Type a class path.')
+  })
+
   it('does not undo typing in a field that the store normalises', async () => {
     await selectStep(wrapper, 1)
     await field(wrapper, 'Enable on-error-continue').find('input').setValue(true)

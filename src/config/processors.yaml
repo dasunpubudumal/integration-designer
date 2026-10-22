@@ -12,3 +12,9 @@ Operate:
 Transform:
   - ipaas_framework.transform.jmespath_transformer.JMESPathTransformer
   - ipaas_framework.transform.handlebars_transformer.HandlebarsTransformer
+
+Validate:
+  - ipaas_framework.validate.simple_validator.SimpleValidator
+
+Enrich:
+  - ipaas_framework.enrich.uuid_enricher.UUIDEnricher

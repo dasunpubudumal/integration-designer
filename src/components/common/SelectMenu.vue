@@ -47,7 +47,7 @@
     <Teleport to="body">
       <Transition name="select-pop">
         <ul
-          v-if="isOpen && visibleOptions.length > 0"
+          v-if="isOpen && (visibleOptions.length > 0 || showEmptyText)"
           ref="menuEl"
           class="select-popover"
           role="listbox"
@@ -74,6 +74,7 @@
               <path d="M2.5 6.5 5 9l4.5-6" />
             </svg>
           </li>
+          <li v-if="showEmptyText" class="select-empty" role="presentation">{{ emptyText }}</li>
         </ul>
       </Transition>
     </Teleport>
@@ -89,7 +90,10 @@ const props = defineProps({
   options: { type: Array, default: () => [] },
   // Allow free text; options become filtered suggestions
   editable: { type: Boolean, default: false },
-  placeholder: { type: String, default: 'Select…' }
+  placeholder: { type: String, default: 'Select…' },
+  // Shown in the open menu when there are no options at all, so an empty
+  // list doesn't look broken. (Typing that filters everything out shows nothing.)
+  emptyText: { type: String, default: '' }
 })
 
 // change: value committed (option picked, or editable input blurred)
@@ -113,6 +117,8 @@ const normalizedOptions = computed(() =>
 const selectedOption = computed(() =>
   normalizedOptions.value.find(o => o.value === props.modelValue) || null
 )
+
+const showEmptyText = computed(() => !!props.emptyText && normalizedOptions.value.length === 0)
 
 // Editable menus filter by what has been typed since opening
 const visibleOptions = computed(() => {
@@ -403,6 +409,18 @@ watch(visibleOptions, () => {
 .select-option--selected {
   color: #c7d2fe;
   font-weight: 600;
+}
+
+.select-empty {
+  /* Wrap to the trigger's width instead of widening the menu */
+  width: 0;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+  white-space: normal;
 }
 
 .select-option-label {
